@@ -1,4 +1,6 @@
 
+
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query
 from service.products import get_all_products
 
@@ -21,8 +23,8 @@ def read_root():
 @app.get("/products")
 def list_products(
     name: str = Query(
-    default=None,
-    min_length=1, 
+    default="",
+    min_length=0, 
     max_length=50, 
     description= "Search prodcuts by name (case insensitive)",
     ),
@@ -33,6 +35,19 @@ def list_products(
     order: str = Query(
         default="asc",
         description= "Order od sorting (asc, desc)"
+    ),
+
+    limit : int =  Query(
+    default=10,
+    ge = 1, 
+    le= 100, 
+    description= "number of products to return",
+    ),
+
+     offset : int =  Query(
+    default=0,
+    ge = 1,  
+    description= "paggination",
     ),
     ):
     products = get_all_products()
@@ -45,6 +60,28 @@ def list_products(
             raise HTTPException(
                 status_code=404, detail = f"No product found"
                 )
+
+        if sort_by_price:
+            reverse = order == "desc"
+            products = sorted(products, key=lambda p:p.get("price",0), reverse=reverse)
     
     total = len(products)
+    #products = products[0:limit]
+    products = products[offset: offset + limit]
     return { "total" : total, "items": products}
+
+@app.get("/products/{product_id}")
+def get_product_by_id(product_id: str = Path
+(
+    ..., 
+    min_length = 36,
+    max_length = 36,
+    description = "UUID of products",
+    example = "a0752149-a1c8-498c-98b2-7c40844346dsh"
+)
+):
+    products = get_all_products()
+    for product in products:
+        if product.get("id") == product_id:
+            return product
+    raise HTTPException(status_code=404, detail="product not found")
