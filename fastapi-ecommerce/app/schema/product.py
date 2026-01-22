@@ -1,6 +1,7 @@
 from uuid import UUID
-from pydantic import BaseModel, Field
-from typing import Annotated
+from pydantic import BaseModel, Field, AnyUrl, field_validator, model_validator, computed_field
+from typing import Annotated, List, Literal, Optional
+from datetime import datetime
 
 class Product(BaseModel):
     id: UUID
@@ -17,7 +18,7 @@ class Product(BaseModel):
             title= "Product name",
             description="Readable product name",
             example= ["Lenovo Model Max"]
-        )
+        ),
     ]
 
     description: Annotated[
@@ -28,7 +29,7 @@ class Product(BaseModel):
             description="Readable description",
             example= ["Official Lenovo product with manufacturer warranty"]
 
-        )
+        ),
     ]
 
     category: Annotated[
@@ -39,7 +40,7 @@ class Product(BaseModel):
             description="Radable category",
             example= ["accessories"]
 
-        )
+        ),
     ]
     brand: Annotated[
         str, Field(
@@ -49,73 +50,86 @@ class Product(BaseModel):
             description="Readable brands",
             example= ["Lenovo"]
 
-        )
+        ),
     ]
 
     price: Annotated [ 
-        int, Field(
-            min_length=3,
-            max_length=80,
-            title= "Price",
-            description="Readable price",
-            example= ["104946.0"]
+        float, Field(
+            ge=0,
+            strict=True,
+            description="Base price (INR)",
+            
 
-        )
+        ),
     ]
 
-    currency: Annotated [ 
-        str, Field(
-            min_length=3,
-            max_length=80,
-            title= "Currency",
-            description="Readable currency",
-            example= ["INR"]
-
-        )
-    ]
+    currency: Literal["INR"]= "INR"
 
     discount_percent: Annotated [ 
         int, Field(
-            min_length=3,
-            max_length=80,
-            title= "Discount percent",
-            description="Readable Discount",
-            example= ["20"]
+            ge=0,
+            le=90,
+            description="Discount in percent (0-90)"
 
-        )
+        ),
     ]
 
     stock: Annotated [ 
         int, Field(
-            min_length=3,
-            max_length=80,
-            title= "stock",
-            description="Readable stock",
-            example= ["122"]
+            ge=0,
+            description="Available stock (>=0)"
 
-        )
+        ),
     ]
     is_active: Annotated [ 
         bool, Field(
-            min_length=3,
-            max_length=80,
-            title= "Active account",
-            description="Acount active or not",
-            example= ["true"]
+            description="Is stock active"
 
-        )
+        ),
     ]
 
     rating: Annotated [ 
         float, Field(
-            min_length=3,
-            max_length=80,
-            title= "Rating",
-            description="Rating for product",
-            example= ["true"]
-
-        )
+            ge=0,
+            le=5,
+            strict=True,
+            description="Rating for product"
+    
+        ),
     ]
+
+    tags: Annotated[ Optional[List[str]],
+         Field(
+            default=None,
+            max_length=10,
+            description="Upto 10 tags"
+    
+        ),
+    ]
+
+    image_urls: Annotated [List[AnyUrl],
+         Field(
+            max_length=1,
+            description="atleast one image url"
+    
+        ),
+    ]
+
+    #dimesions_c,
+    #seller
+    created_at: datetime
+
+    @field_validator("sku", mode="after")
+
+    @classmethod
+    def validate_sku_format(cls, value:str):
+        if "-" not in value:
+            raise ValueError("Sku must have '-'")
+        
+        last = value.split("-")[-1]
+        if not (len(last)==3 and last.isDigit()):
+            raise ValueError("Sku end with a 3 digit sequence like -321")
+        return value
     
     
 
